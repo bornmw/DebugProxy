@@ -67,9 +67,10 @@ public class Main {
             System.out.println("\n[socket open]\n");
             try {
                 int i;
-                while ((i = is.read()) != -1) {
-                    os.write(i);
-                    System.out.print((char) i);
+                byte[] buffer = new byte[64];
+                while ((i = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, i);
+                    System.out.write(buffer, 0, i);
                 }
                 os.close();
                 is.close();
