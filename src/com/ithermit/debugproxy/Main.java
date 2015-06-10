@@ -34,6 +34,7 @@ public class Main {
             Socket socket = sslServerSocket.accept();
             final InputStream localIs = socket.getInputStream();
             final OutputStream localOs = socket.getOutputStream();
+            socket.setSoTimeout(60000);
 
             SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             SSLSocket s = (SSLSocket) factory.createSocket(remoteHost, remotePort);
@@ -42,11 +43,11 @@ public class Main {
             final OutputStream remoteOs = s.getOutputStream();
             final InputStream remoteIs = s.getInputStream();
 
-            Pipe pipe = new Pipe(localIs, remoteOs);
+            Pipe pipe = new Pipe(socket, s, localIs, remoteOs);
             Thread th1 = new Thread(pipe);
             th1.start();
 
-            Pipe pipe2 = new Pipe(remoteIs, localOs);
+            Pipe pipe2 = new Pipe(socket, s, remoteIs, localOs);
             Thread th2 = new Thread(pipe2);
             th2.start();
         }
@@ -54,10 +55,14 @@ public class Main {
     }
 
     class Pipe implements Runnable {
+        private Socket socketLocal;
+        private Socket socketRemote;
         private OutputStream os;
         private InputStream is;
 
-        public Pipe(InputStream is, OutputStream os) {
+        public Pipe(Socket socketLocal, Socket socketRemote, InputStream is, OutputStream os) {
+            this.socketLocal = socketLocal;
+            this.socketRemote = socketRemote;
             this.os = os;
             this.is = is;
         }
@@ -76,7 +81,18 @@ public class Main {
                 is.close();
                 System.out.println("\n");
             } catch (IOException e) {
-                System.out.println("[socket closed]");
+                System.out.println("[sockets closed " + e.getMessage() + "]");
+            } finally {
+                try {
+                    socketLocal.close();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+                try {
+                    socketRemote.close();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
             }
         }
     }
